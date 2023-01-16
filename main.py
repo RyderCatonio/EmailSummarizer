@@ -1,24 +1,31 @@
 from __future__ import print_function
 
 import os.path
+import base64
+from bs4 import BeautifulSoup
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+import google.auth
+from email.mime.text import MIMEText
+
+
+from email.message import EmailMessage
 
 # # If modifying these scopes, delete the file token.json.
-SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+SCOPES = ['https://www.googleapis.com/auth/gmail.readonly',
+          'https://www.googleapis.com/auth/gmail.send',
+          'https://www.googleapis.com/auth/gmail.compose']
 
 
 def main():
-    email_addresses = ["rydercatonio8@gmail.com","catonio@ualberta.ca"]
+    email_addresses = []
+    with open('emails.txt') as f:
+        email_addresses = f.read().splitlines()
 
-
-    """Shows basic usage of the Gmail API.
-    Lists the user's Gmail labels.
-    """
     creds = None
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
@@ -36,72 +43,44 @@ def main():
         # Save the credentials for the next run
         with open('token.json', 'w') as token:
             token.write(creds.to_json())
-
     try:
         # Call the Gmail API
+
         service = build('gmail', 'v1', credentials=creds)
+        email = ''
+        for person in email_addresses:  # Iterate through emails from text file
+            email += person + "<br>"
+            query = "from:" + person + " " + "is:unread"
+            messages = service.users().messages().list(
+                userId="me", labelIds=['INBOX'], q=query).execute()  # Get unread emails for the specified email address
+            try:
+                for message in messages['messages']:
+                    msg = service.users().messages().get(
+                        userId="me", id=message['id']).execute()
+                    if "parts" in msg.get("payload"):
+                        for part in msg["payload"]["parts"]:
+                            if part["mimeType"] == "text/html":
+                                if "data" in part["body"]:
+                                    message_body = base64.urlsafe_b64decode(
+                                        part["body"]["data"].encode("ASCII")).decode("utf-8")
+                                    soup = BeautifulSoup(
+                                        message_body, "html.parser")
+                                    email += soup.get_text(separator='\n') + \
+                                        "<br>"
+                    email += "------------------<br>"
 
-        for person in email_addresses:
-            test = "from:" + person + " " + "is:unread"
-            messages = service.users().messages().list(userId="me",labelIds=['INBOX'],q=test).execute()
-            for message in messages['messages']:
-                msg = service.users().messages().get(userId="me",id=message['id']).execute()
-                print(msg['snippet'])
+            except:
+                email += "You have no unread messages from this email address"
 
-
-
-
-
-
-
-
-
-
-
-        # print(messages)
-
-        # for message in messages:
-        #     print(message)
-        # #     # print(message['id'])
-        # #     # msg = service.users().messages().get(userId="me",id=message['id']).execute()
-        # #     # email_body = msg['payload']
-        # #     # print(email_body)
-
-
-
-        # print(messages)
-        # msg = messages['messages']
-
-        # for m in msg:
-        #     print(m['snippet'])
-
-
-
-
-        # print(msg)
-
-
-
-
-
-
-        # message = service.users().messages().get(userId="me",id="185a396e381b07ad",format="raw").execute()
-
-
-        # print(messages['snippet'])
-        # print(results)
-
-
-
-        # results = service.users().messages().list(userId="me",labelIds=['INBOX'],q="is:unread").execute()
-        # messages= results.get('messages',[])
-        # print(messages)
-        # # results = service.users().labels().list(userId='me').execute()
-        # # labels = results.get('labels', [])
-
+        message = MIMEText(email, 'html')
+        message['to'] = 'rcatonio@ualberta.ca'
+        message['subject'] = 'Automated draft'
+        create_message = {'raw': base64.urlsafe_b64encode(
+            message.as_bytes()).decode()}
+        send_message = (service.users().messages().send(
+            userId="me", body=create_message).execute())
 
     except HttpError as error:
-        # TODO(developer) - Handle errors from gmail API.
         print(f'An error occurred: {error}')
 
 
