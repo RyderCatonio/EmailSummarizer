@@ -10,6 +10,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 import google.auth
+import datetime
 from email.mime.text import MIMEText
 
 
@@ -47,9 +48,9 @@ def main():
         # Call the Gmail API
 
         service = build('gmail', 'v1', credentials=creds)
-        email = ''
+        email = '~~~~~~~Email Summary~~~~~~~<br>'
         for person in email_addresses:  # Iterate through emails from text file
-            email += person + "<br>"
+            email += "From: " + person + "<br>"
             query = "from:" + person + " " + "is:unread"
             messages = service.users().messages().list(
                 userId="me", labelIds=['INBOX'], q=query).execute()  # Get unread emails for the specified email address
@@ -57,6 +58,8 @@ def main():
                 for message in messages['messages']:
                     msg = service.users().messages().get(
                         userId="me", id=message['id']).execute()
+                    date_time = str(datetime.datetime.fromtimestamp(
+                        (int(msg['internalDate'])/1000)))
                     if "parts" in msg.get("payload"):
                         for part in msg["payload"]["parts"]:
                             if part["mimeType"] == "text/html":
@@ -65,20 +68,22 @@ def main():
                                         part["body"]["data"].encode("ASCII")).decode("utf-8")
                                     soup = BeautifulSoup(
                                         message_body, "html.parser")
+                                    email += "Sent @ " + \
+                                        date_time + "<br>"
                                     email += soup.get_text(separator='\n') + \
                                         "<br>"
-                    email += "------------------<br>"
+                email += "<br><br>"
 
             except:
                 email += "You have no unread messages from this email address"
 
         message = MIMEText(email, 'html')
         message['to'] = 'rcatonio@ualberta.ca'
-        message['subject'] = 'Automated draft'
+        message['subject'] = 'Email Summary'
         create_message = {'raw': base64.urlsafe_b64encode(
             message.as_bytes()).decode()}
-        send_message = (service.users().messages().send(
-            userId="me", body=create_message).execute())
+        service.users().messages().send(
+            userId="me", body=create_message).execute()
 
     except HttpError as error:
         print(f'An error occurred: {error}')
