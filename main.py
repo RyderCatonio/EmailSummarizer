@@ -23,9 +23,11 @@ SCOPES = ['https://www.googleapis.com/auth/gmail.readonly',
 
 
 def main():
+    # Read in emails from textfile
     email_addresses = []
     with open('emails.txt') as f:
         email_addresses = f.read().splitlines()
+    f.close()
 
     creds = None
     # The file token.json stores the user's access and refresh tokens, and is
@@ -43,23 +45,32 @@ def main():
             creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
         with open('token.json', 'w') as token:
+
             token.write(creds.to_json())
     try:
         # Call the Gmail API
-
         service = build('gmail', 'v1', credentials=creds)
-        email = '~~~~~~~Email Summary~~~~~~~<br>'
+        email = '<h2><strong>Email Summary</strong></h2>'
         for person in email_addresses:  # Iterate through emails from text file
-            email += "From: " + person + "<br>"
+            email += "<h3><strong>From:</strong> " + person + "<br></h3>"
             query = "from:" + person + " " + "is:unread"
             messages = service.users().messages().list(
                 userId="me", labelIds=['INBOX'], q=query).execute()  # Get unread emails for the specified email address
             try:
-                for message in messages['messages']:
+                for message in messages['messages']:  # Find the message body
                     msg = service.users().messages().get(
                         userId="me", id=message['id']).execute()
                     date_time = str(datetime.datetime.fromtimestamp(
                         (int(msg['internalDate'])/1000)))
+                    subject = "None"
+                    email += "<strong>Sent @ " + \
+                        date_time + "<br></strong>"
+                    if "payload" in msg and "headers" in msg["payload"]:
+                        for header in msg["payload"]["headers"]:
+                            if header["name"] == "Subject":
+                                subject = header["value"]
+                                email += "<strong>Subject:</strong> " + subject + "<br>"
+                                break
                     if "parts" in msg.get("payload"):
                         for part in msg["payload"]["parts"]:
                             if part["mimeType"] == "text/html":
@@ -68,15 +79,15 @@ def main():
                                         part["body"]["data"].encode("ASCII")).decode("utf-8")
                                     soup = BeautifulSoup(
                                         message_body, "html.parser")
-                                    email += "Sent @ " + \
-                                        date_time + "<br>"
                                     email += soup.get_text(separator='\n') + \
-                                        "<br>"
-                email += "<br><br>"
+                                        "<br><br>"
 
-            except:
+                email += "<br><br>"  # Split each recipient with space
+
+            except:  # If no messages
                 email += "You have no unread messages from this email address"
 
+        # Send message with summary
         message = MIMEText(email, 'html')
         message['to'] = 'rcatonio@ualberta.ca'
         message['subject'] = 'Email Summary'
