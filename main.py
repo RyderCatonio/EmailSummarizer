@@ -68,34 +68,6 @@ class EmailSummarizer:
     def make_email(self, service, email_addresses):
         # Call the Gmail API
         emailHeader = "<h2><strong>Email Summary</strong></h2>"
-        # emailHeader = '''
-        #      <div style="height:50px;overflow-y:auto;">
-        #         <table style="width:10px">
-        #             <tr>
-        #                 <td>data</td>
-        #             </tr>
-        #             <tr>
-        #                 <td>data</td>
-        #             </tr>
-        #             <tr>
-        #                 <td>data</td>
-        #             </tr>
-        #             <tr>
-        #                 <td>data</td>
-        #             </tr>
-        #             <tr>
-        #                 <td>data</td>
-        #             </tr>
-        #             <tr>
-        #                 <td>data</td>
-        #             </tr>
-        #             <tr>
-        #                 <td>data</td>
-        #             </tr>
-        #         </table>
-        #     </div>
-        # '''
-
         self.body = [""] * len(email_addresses)
 
         # threads = []
@@ -112,7 +84,8 @@ class EmailSummarizer:
 
 
     def make_email_body(self, service, email_address, idx):
-        email = "<h3><strong>From:</strong> " + email_address + "<br></h3>"
+        # email = "<h3><strong>From:</strong> " + email_address + "<br></h3>"
+        email = ""
         query = "from:" + email_address + " " + "is:unread"
         messages = (
             service.users()
@@ -121,7 +94,7 @@ class EmailSummarizer:
             .execute()
         )  # Get unread emails for the specified email address
         try:
-            email += self.make_email_message(service, messages)
+            email += self.make_email_message(service, messages, email_address)
         except Exception as e:  # If no messages
             email += "You have no unread messages from this email address"
 
@@ -129,8 +102,17 @@ class EmailSummarizer:
 
 
     # generates messages of email
-    def make_email_message(self, service, messages):
-        body_message = ""
+    def make_email_message(self, service, messages, email_address):
+        body_message = '''
+                <div style="height:150px;overflow-y:auto; background-color: #dbd9d9; border-radius: 25px; padding: 20px;">
+                <div style="text-align:center;">
+                    <h3><strong>From: </strong>''' + email_address + '''<br></h3>
+                </div>
+                <table style="width:auto">
+        '''
+
+
+
         for message in messages["messages"]:
             msg = service.users().messages().get(userId="me", id=message["id"]).execute()
             date_time = str(
@@ -153,13 +135,13 @@ class EmailSummarizer:
                                 part["body"]["data"].encode("ASCII")
                             ).decode("utf-8")
                             soup = BeautifulSoup(message_body, "html.parser")
-                            body_message += soup.get_text(separator="\n") + "<br><br>"
+                            body_message +=  "<tr><td>" + soup.get_text(separator="\n") + "</td></tr>"
             elif "body" in payload and "data" in payload["body"]: # Check if message body resides straight from payload (will be found here in simple emails with just a body)
                 message_body = base64.urlsafe_b64decode(payload["body"]["data"].encode("ASCII")).decode("utf-8")
                 soup = BeautifulSoup(message_body, "html.parser")
-                body_message += soup.get_text(separator="\n") + "<br><br>"
-
-            body_message += "<br><br>"  # Split each recipient with space
+                body_message += "<tr><td>" + soup.get_text(separator="\n") + "</td></tr>"
+        body_message += "</table></div>"
+        body_message += "<br><br>"  # Split each recipient with space
 
 
         return body_message
