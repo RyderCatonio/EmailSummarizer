@@ -1,10 +1,11 @@
 # Email Summarizer
+<img width="898" alt="Screen Shot 2023-08-29 at 10 03 58 PM" src="https://github.com/RyderCatonio/EmailSummarizer/assets/97204693/c6d7996a-2313-4937-b079-c24a64e47b2a">
 
 A Python script utilizing the Gmail API to automatically summarize and collate specified emails, improving email management efficiency.
 
 **Technology Used**
 
-- Python
+- Python, HTML, CSS
 
 - BeautifulSoup
 
