@@ -104,8 +104,6 @@ class EmailSummarizer:
 
     # generates messages of email
     def get_email_message(self, service, messages, email_address):
-        if (email_address == "rydercatonio8@gmail.com"):
-            email_address = "test1@gmail.com"
         body_message = '''
                 <div style="height:300px;overflow-y:auto; background-color: #2b2d42; border-radius: 15px; padding: 20px; color: #edf2f4;">
                     <div style="text-align:center;">
