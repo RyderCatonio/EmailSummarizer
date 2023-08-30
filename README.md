@@ -4,7 +4,7 @@ A Python script utilizing the Gmail API to automatically summarize and collate s
 
 **Technology Used**
 
-- Python
+- Python,HTML,CSS
 
 - BeautifulSoup
 
