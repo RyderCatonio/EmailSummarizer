@@ -67,7 +67,6 @@ class EmailSummarizer:
     # generates email to send(uses threads to concurrently get the data of all emails)
     def make_email(self, service, email_addresses):
         # Call the Gmail API
-        emailHeader = "<h2><strong>Email Summary</strong></h2>"
         self.body = [""] * len(email_addresses)
 
         # threads = []
@@ -80,7 +79,7 @@ class EmailSummarizer:
         # for thread in threads:
         #     thread.join()
 
-        return emailHeader + "".join(self.body)
+        return "".join(self.body)
 
 
     def make_email_body(self, service, email_address, idx):
@@ -104,22 +103,19 @@ class EmailSummarizer:
     # generates messages of email
     def make_email_message(self, service, messages, email_address):
         body_message = '''
-                <div style="height:150px;overflow-y:auto; background-color: #dbd9d9; border-radius: 25px; padding: 20px;">
+                <div style="height:300px;overflow-y:auto; background-color: #2b2d42; border-radius: 15px; padding: 20px; color: #edf2f4;">
                 <div style="text-align:center;">
-                    <h3><strong>From: </strong>''' + email_address + '''<br></h3>
+                    <a style ="color:#fca311;"href ="''' + email_address +  '''"> ''' + email_address + '''</a>
                 </div>
                 <table style="width:auto">
         '''
 
-
-
         for message in messages["messages"]:
             msg = service.users().messages().get(userId="me", id=message["id"]).execute()
-            date_time = str(
-                datetime.datetime.fromtimestamp((int(msg["internalDate"]) / 1000))
-            )
+            date_time =  datetime.datetime.fromtimestamp((int(msg["internalDate"]) / 1000))
+            date_time = date_time.strftime("%B %d, %Y @ %I:%M%p")
             subject = "None"
-            body_message += "<strong>Sent @ " + date_time + "<br></strong>"
+            body_message += "<strong>Sent: </strong>" + date_time + "<br>"
             if "payload" in msg and "headers" in msg["payload"]:
                 for header in msg["payload"]["headers"]:
                     if header["name"] == "Subject":
@@ -129,17 +125,18 @@ class EmailSummarizer:
             payload = msg.get("payload")
             if "parts" in payload: # Check if message body resides in parts section of payload (will be found here in more complex emails with several parts to them)
                 for part in payload["parts"]:
-                    if part["mimeType"] == "text/html":
-                        if "data" in part["body"]:
-                            message_body = base64.urlsafe_b64decode(
-                                part["body"]["data"].encode("ASCII")
-                            ).decode("utf-8")
-                            soup = BeautifulSoup(message_body, "html.parser")
-                            body_message +=  "<tr><td>" + soup.get_text(separator="\n") + "</td></tr>"
+                    if part["mimeType"] == "text/html" and 'data' in part["body"]:
+                        message_body = base64.urlsafe_b64decode(
+                            part["body"]["data"].encode("ASCII")
+                        ).decode("utf-8")
+                        soup = BeautifulSoup(message_body, "html.parser")
+                        body_message +=  "<tr><td>" + soup.get_text(separator="\n") + "</td></tr>"
+                        body_message += "<br><br>"  # Split each recipient with space
             elif "body" in payload and "data" in payload["body"]: # Check if message body resides straight from payload (will be found here in simple emails with just a body)
                 message_body = base64.urlsafe_b64decode(payload["body"]["data"].encode("ASCII")).decode("utf-8")
                 soup = BeautifulSoup(message_body, "html.parser")
                 body_message += "<tr><td>" + soup.get_text(separator="\n") + "</td></tr>"
+                body_message += "<br><br>"  # Split each recipient with space
         body_message += "</table></div>"
         body_message += "<br><br>"  # Split each recipient with space
 
@@ -158,7 +155,6 @@ class EmailSummarizer:
 
 def main():
     summarizer = EmailSummarizer("rcatonio@ualberta.ca", "Email Summary")
-
     # login and get proper gmail credentials
     email_addresses = summarizer.fetch_emails("emails.txt")
     creds = summarizer.fetch_credentials("token.json")
