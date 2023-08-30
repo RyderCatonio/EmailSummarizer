@@ -37,7 +37,6 @@ class EmailSummarizer:
 
         return email_addresses
 
-
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
@@ -69,21 +68,13 @@ class EmailSummarizer:
         # Call the Gmail API
         self.body = [""] * len(email_addresses)
 
-        # threads = []
         for i, email_address in enumerate(email_addresses):  # Iterate through emails from text file
             self.make_email_body(service,email_address,i)
-            # thread = threading.Thread(target=self.make_email_body, args=[service, email_address, i])
-            # threads.append(thread)
-            # thread.start()
-
-        # for thread in threads:
-        #     thread.join()
 
         return "".join(self.body)
 
 
     def make_email_body(self, service, email_address, idx):
-        # email = "<h3><strong>From:</strong> " + email_address + "<br></h3>"
         email = ""
         query = "from:" + email_address + " " + "is:unread"
         messages = (
@@ -93,24 +84,37 @@ class EmailSummarizer:
             .execute()
         )  # Get unread emails for the specified email address
         try:
-            email += self.make_email_message(service, messages, email_address)
+            email += self.get_email_message(service, messages, email_address)
         except Exception as e:  # If no messages
-            email += "You have no unread messages from this email address"
+            body_message = '''
+                <div style="height:50px;overflow-y:auto; background-color: #2b2d42; border-radius: 15px; padding: 20px; color: #edf2f4;">
+                    <div style="text-align:center;">
+                        <a style ="color:#fca311;"href ="''' + email_address +  '''"> ''' + email_address + '''</a>
+                    </div>
+                    <table style="width:auto">
+                        <tr><td>You have no unread messages from this email address</td></tr>
+                    </table>
+                </div>
+                <br>
+            '''
+            email += body_message
 
         self.body[idx] = email
 
 
     # generates messages of email
-    def make_email_message(self, service, messages, email_address):
+    def get_email_message(self, service, messages, email_address):
+        if (email_address == "rydercatonio8@gmail.com"):
+            email_address = "test1@gmail.com"
         body_message = '''
                 <div style="height:300px;overflow-y:auto; background-color: #2b2d42; border-radius: 15px; padding: 20px; color: #edf2f4;">
-                <div style="text-align:center;">
-                    <a style ="color:#fca311;"href ="''' + email_address +  '''"> ''' + email_address + '''</a>
-                </div>
-                <table style="width:auto">
+                    <div style="text-align:center;">
+                        <a style ="color:#fca311;"href ="''' + email_address +  '''"> ''' + email_address + '''</a>
+                    </div>
+                    <table style="width:auto">
         '''
 
-        for message in messages["messages"]:
+        for message in messages["messages"]: #Iterate over messages and find message based on id, pull out subject, date, and body
             msg = service.users().messages().get(userId="me", id=message["id"]).execute()
             date_time =  datetime.datetime.fromtimestamp((int(msg["internalDate"]) / 1000))
             date_time = date_time.strftime("%B %d, %Y @ %I:%M%p")
@@ -142,7 +146,6 @@ class EmailSummarizer:
 
 
         return body_message
-
 
     # sends the email to the client
     def send_email(self, service, body):

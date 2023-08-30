@@ -19,7 +19,7 @@ A Python script utilizing the Gmail API to automatically summarize and collate s
 
 **Development**
 
-The script was developed in January 2022 and utilizes the Gmail API to fetch specified emails and summarize them using BeautifulSoup. The script allows for customization through user input, providing increased flexibility and a personalized email management experience.
+The script was developed in January 2023 (Updated in August 2023) and utilizes the Gmail API to fetch specified emails and summarize them using BeautifulSoup. The script allows for customization through user input, providing increased flexibility and a personalized email management experience.
 
 **Benefits**
 
